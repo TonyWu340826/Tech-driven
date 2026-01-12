@@ -5,12 +5,13 @@ interface TutorDetailViewProps {
   tutor: Tutor;
   isFavorite: boolean;
   onBack: () => void;
-  onBook: (tutor: Tutor) => void;
-  onToggleFavorite: (tutor: Tutor) => void;
+  onBook: (tutor: Tutor, type: 'online' | 'home') => void;
+  onToggleFavorite: (tutorId: string) => void;
 }
 
 export const TutorDetailView: React.FC<TutorDetailViewProps> = ({ tutor, isFavorite, onBack, onBook, onToggleFavorite }) => {
   const [showHeaderTitle, setShowHeaderTitle] = useState(false);
+  const [selectedType, setSelectedType] = useState<'online' | 'home'>('online');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,7 +32,7 @@ export const TutorDetailView: React.FC<TutorDetailViewProps> = ({ tutor, isFavor
         </h2>
         <div className="flex w-10 items-center justify-end">
           <button
-            onClick={() => onToggleFavorite(tutor)}
+            onClick={() => onToggleFavorite(tutor.id)}
             className="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
           >
             <span className={`material-symbols-outlined ${isFavorite ? 'text-red-500 filled' : 'text-slate-900 dark:text-white'}`} style={{ fontSize: '24px' }}>favorite</span>
@@ -41,7 +42,8 @@ export const TutorDetailView: React.FC<TutorDetailViewProps> = ({ tutor, isFavor
 
       <div className="flex flex-col gap-4 items-center pt-2 px-4">
         <div className="relative group cursor-pointer">
-          <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 shadow-xl ring-4 ring-surface-light dark:ring-surface-dark" style={{ backgroundImage: `url('${tutor.image}')` }}></div>
+          <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 shadow-xl ring-4 ring-surface-light dark:ring-surface-dark bg-slate-200"
+            style={{ backgroundImage: tutor.image ? `url('${tutor.image}')` : `url('https://api.dicebear.com/7.x/avataaars/svg?seed=${tutor.name}&backgroundColor=${tutor.gender === 'female' ? 'ffdfbf' : 'c0aede'}')` }}></div>
           {tutor.verified && (
             <div className="absolute bottom-1 right-1 bg-primary text-white rounded-full p-1 border-4 border-background-light dark:border-background-dark flex items-center justify-center" title="Verified Tutor">
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>verified</span>
@@ -68,9 +70,13 @@ export const TutorDetailView: React.FC<TutorDetailViewProps> = ({ tutor, isFavor
       </div>
 
       <div className="px-4 py-2">
-        <h3 className="text-lg font-bold leading-tight tracking-[-0.015em] pb-3">收费标准</h3>
+        <h3 className="text-lg font-bold leading-tight tracking-[-0.015em] pb-3">收费标准 (请选择)</h3>
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex flex-col gap-2 relative overflow-hidden group">
+          <div
+            onClick={() => setSelectedType('online')}
+            className={`bg-surface-light dark:bg-surface-dark p-4 rounded-xl border transition-all cursor-pointer flex flex-col gap-2 relative overflow-hidden group
+              ${selectedType === 'online' ? 'border-primary ring-2 ring-primary/20 shadow-lg' : 'border-gray-200 dark:border-gray-800 hover:border-primary/50'}`}
+          >
             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
               <span className="material-symbols-outlined text-4xl text-primary">videocam</span>
             </div>
@@ -82,8 +88,13 @@ export const TutorDetailView: React.FC<TutorDetailViewProps> = ({ tutor, isFavor
               <span className="text-2xl font-bold">¥{tutor.price}</span>
               <span className="text-xs text-slate-500 dark:text-slate-400">/ 小时</span>
             </div>
+            {selectedType === 'online' && <div className="absolute top-2 right-2 flex size-5 items-center justify-center rounded-full bg-primary text-white"><span className="material-symbols-outlined text-sm">check</span></div>}
           </div>
-          <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-primary/50 dark:border-primary/50 ring-1 ring-primary/20 flex flex-col gap-2 relative overflow-hidden group">
+          <div
+            onClick={() => setSelectedType('home')}
+            className={`bg-surface-light dark:bg-surface-dark p-4 rounded-xl border transition-all cursor-pointer flex flex-col gap-2 relative overflow-hidden group
+              ${selectedType === 'home' ? 'border-primary ring-2 ring-primary/20 shadow-lg' : 'border-gray-200 dark:border-gray-800 hover:border-primary/50'}`}
+          >
             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
               <span className="material-symbols-outlined text-4xl text-primary">home_pin</span>
             </div>
@@ -95,7 +106,7 @@ export const TutorDetailView: React.FC<TutorDetailViewProps> = ({ tutor, isFavor
               <span className="text-2xl font-bold">¥{tutor.price + 50}</span>
               <span className="text-xs text-slate-500 dark:text-slate-400">/ 小时</span>
             </div>
-            <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
+            {selectedType === 'home' && <div className="absolute top-2 right-2 flex size-5 items-center justify-center rounded-full bg-primary text-white"><span className="material-symbols-outlined text-sm">check</span></div>}
           </div>
         </div>
       </div>
@@ -166,11 +177,11 @@ export const TutorDetailView: React.FC<TutorDetailViewProps> = ({ tutor, isFavor
         <div className="flex flex-col">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">起价</span>
           <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-[#111418] dark:text-white">¥{tutor.price}</span>
+            <span className="text-xl font-bold text-[#111418] dark:text-white">¥{selectedType === 'online' ? tutor.price : tutor.price + 50}</span>
             <span className="text-sm text-slate-500 dark:text-slate-400">/小时</span>
           </div>
         </div>
-        <button onClick={() => onBook(tutor)} className="flex-1 bg-primary hover:bg-primary/90 text-white h-12 rounded-xl font-bold text-base shadow-lg shadow-primary/25 active:scale-95 transition-all flex items-center justify-center gap-2">
+        <button onClick={() => onBook(tutor, selectedType)} className="flex-1 bg-primary hover:bg-primary/90 text-white h-12 rounded-xl font-bold text-base shadow-lg shadow-primary/25 active:scale-95 transition-all flex items-center justify-center gap-2">
           立即预约
           <span className="material-symbols-outlined text-lg">arrow_forward</span>
         </button>

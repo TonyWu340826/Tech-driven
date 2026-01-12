@@ -14,40 +14,43 @@ import { PersonalInfoView } from './views/PersonalInfoView';
 import { FavoritesView } from './views/FavoritesView';
 import { LoginView } from './views/LoginView';
 import { RegisterView } from './views/RegisterView';
+import { MyBookingsView } from './views/MyBookingsView';
+import { AccountLogsView } from './views/AccountLogsView';
+import { CompletedClassesView } from './views/CompletedClassesView';
 import { BottomNav } from './components/BottomNav';
-import { authService, tutorService } from './src/services/api';
+import { authService, tutorService, bookingService } from './src/services/api';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('LOGIN');
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [initialDiscoveryCategory, setInitialDiscoveryCategory] = useState<string | undefined>(undefined);
-  // Simple favorite management: storing IDs
   const [favoriteTutorIds, setFavoriteTutorIds] = useState<string[]>([]);
+  const [myBookings, setMyBookings] = useState<any[]>([]);
+  const [bookingType, setBookingType] = useState<'online' | 'home'>('home');
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check auth status
     const user = authService.getCurrentUser();
     if (user) {
+      setCurrentUser(user);
       setCurrentView('HOME');
       fetchTutors();
+      fetchMyBookings();
     }
   }, []);
-
   const fetchTutors = async () => {
     try {
       setLoading(true);
       const data = await tutorService.getAll();
-      // Ensure data matches frontend types
-      const formattedTutors = data.map((t: any) => {
+      const formattedTutors = (data || []).map((t: any) => {
         let subjects = t.subjects;
         if (typeof subjects === 'string') {
           try { subjects = JSON.parse(subjects); } catch (e) { }
         }
         const subject = Array.isArray(subjects) ? subjects[0] : 'General';
-
         return {
           ...t,
           id: String(t.id),
@@ -72,9 +75,22 @@ const App: React.FC = () => {
     }
   };
 
+  const fetchMyBookings = async () => {
+    try {
+      console.log('[DEBUG] Fetching my bookings...');
+      const data = await bookingService.getMyBookings();
+      console.log('[DEBUG] Raw bookings data received:', data);
+      setMyBookings(data || []);
+    } catch (error) {
+      console.error('[DEBUG] Failed to fetch bookings:', error);
+    }
+  };
+
   const handleLoginSuccess = () => {
+    setCurrentUser(authService.getCurrentUser());
     setCurrentView('HOME');
     fetchTutors();
+    fetchMyBookings();
   };
 
   const handleTutorClick = (tutor: Tutor) => {
@@ -82,77 +98,146 @@ const App: React.FC = () => {
     setCurrentView('TUTOR_DETAIL');
   };
 
-  const handleBookClick = (tutor: Tutor) => {
+  const handleBookClick = (tutor: Tutor, type: 'online' | 'home' = 'home') => {
     setSelectedTutor(tutor);
+    setBookingType(type);
     setCurrentView('BOOKING');
   };
 
   const handleBookingConfirm = () => {
+    fetchMyBookings();
     setCurrentView('SCHEDULE');
+  };
+
+  const toggleFavorite = (tutorId: string) => {
+    setFavoriteTutorIds(prev =>
+      prev.includes(tutorId) ? prev.filter(id => id !== tutorId) : [...prev, tutorId]
+    );
+  };
+
+  const getFavoriteTutors = () => tutors.filter(t => favoriteTutorIds.includes(t.id));
+
+  const handleSearchClick = (category?: string) => {
+    setInitialDiscoveryCategory(category);
+    setCurrentView('DISCOVERY');
   };
 
   const handleConversationClick = (conversation: Conversation) => {
     setSelectedConversation(conversation);
     setCurrentView('CHAT_DETAIL');
-  }
-
-  const handleSearchClick = (category?: string) => {
-    setInitialDiscoveryCategory(category);
-    setCurrentView('DISCOVERY');
-  }
-
-  const toggleFavorite = (tutor: Tutor) => {
-    setFavoriteTutorIds(prev => {
-      if (prev.includes(tutor.id)) {
-        return prev.filter(id => id !== tutor.id);
-      } else {
-        return [...prev, tutor.id];
-      }
-    });
-  };
-
-  const getFavoriteTutors = () => {
-    // Use fetched tutors + mock discovery (until discovery is real)
-    // Actually let's just use the loaded tutors for now
-    const allTutors = [...tutors, ...MOCK_DISCOVERY_TUTORS];
-    const uniqueTutors = Array.from(new Map(allTutors.map(item => [item.id, item])).values());
-    return uniqueTutors.filter(t => favoriteTutorIds.includes(t.id));
   };
 
   const handleLogout = () => {
     authService.logout();
+    setCurrentUser(null);
     setCurrentView('LOGIN');
-    setTutors([]);
+  };
+
+  const handleNavigate = (view: ViewState) => {
+    if (view === 'SCHEDULE' || view === 'MY_BOOKINGS' || view === 'ACCOUNT_LOGS' || view === 'COMPLETED_CLASSES') {
+      fetchMyBookings();
+    }
+    setCurrentView(view);
   };
 
   const renderView = () => {
     switch (currentView) {
-      case 'LOGIN':
-        return <LoginView onLogin={handleLoginSuccess} onRegisterClick={() => setCurrentView('REGISTER')} />;
       case 'REGISTER':
-        return <RegisterView onRegister={handleLoginSuccess} onLoginClick={() => setCurrentView('LOGIN')} />;
+        return <RegisterView onBack={() => setCurrentView('LOGIN')} onRegisterSuccess={() => setCurrentView('LOGIN')} />;
+      case 'LOGIN':
+        return <LoginView onLoginSuccess={handleLoginSuccess} onNavigateToRegister={() => setCurrentView('REGISTER')} />;
       case 'HOME':
-        return <HomeView tutors={tutors} onTutorClick={handleTutorClick} onSearchClick={handleSearchClick} />;
+        return <HomeView user={currentUser} tutors={tutors} onTutorClick={handleTutorClick} onSearchClick={handleSearchClick} />;
       case 'DISCOVERY':
-        return <DiscoveryView tutors={tutors} initialCategory={initialDiscoveryCategory} onBack={() => setCurrentView('HOME')} onTutorClick={handleTutorClick} />;
+        return <DiscoveryView initialCategory={initialDiscoveryCategory} tutors={tutors} onTutorClick={handleTutorClick} />;
       case 'TUTOR_DETAIL':
         if (!selectedTutor) return null;
-        return <TutorDetailView
-          tutor={selectedTutor}
-          isFavorite={favoriteTutorIds.includes(selectedTutor.id)}
-          onBack={() => setCurrentView('HOME')}
-          onBook={handleBookClick}
-          onToggleFavorite={toggleFavorite}
-        />;
+        return (
+          <TutorDetailView
+            tutor={selectedTutor}
+            isFavorite={favoriteTutorIds.includes(selectedTutor.id)}
+            onBack={() => setCurrentView('HOME')}
+            onBook={handleBookClick}
+            onToggleFavorite={toggleFavorite}
+          />
+        );
       case 'BOOKING':
         if (!selectedTutor) return null;
-        return <BookingView tutor={selectedTutor} onBack={() => setCurrentView('TUTOR_DETAIL')} onConfirm={handleBookingConfirm} />;
+        return <BookingView tutor={selectedTutor} initialType={bookingType} onBack={() => setCurrentView('TUTOR_DETAIL')} onConfirm={handleBookingConfirm} />;
       case 'SCHEDULE':
-        return <ScheduleView
-          scheduleItems={SCHEDULE_ITEMS}
-          onJoinClass={() => setCurrentView('CLASSROOM')}
-          onContactTutor={() => setCurrentView('MESSAGES')}
-        />;
+        const formattedSchedule = (myBookings || []).map(b => {
+          // 1. 安全解析日期对象
+          let start: Date;
+          try {
+            const rawS = b.startTime;
+            if (rawS instanceof Date) {
+              start = rawS;
+            } else if (typeof rawS === 'string') {
+              const t = new Date(rawS);
+              if (isNaN(t.getTime())) {
+                start = new Date(rawS.replace(/-/g, '/'));
+              } else {
+                start = t;
+              }
+            } else {
+              console.warn('[Schedule] Invalid startTime:', rawS);
+              start = new Date(0); // Fallback to 1970
+            }
+          } catch (e) {
+            console.error('[Schedule] Error parsing startTime:', b.startTime, e);
+            start = new Date(0);
+          }
+
+          if (isNaN(start.getTime())) start = new Date(0);
+
+          let end: Date;
+          try {
+            const rawE = b.endTime;
+            if (rawE instanceof Date) {
+              end = rawE;
+            } else if (typeof rawE === 'string') {
+              const t = new Date(rawE);
+              if (isNaN(t.getTime())) {
+                end = new Date(rawE.replace(/-/g, '/'));
+              } else {
+                end = t;
+              }
+            } else {
+              end = new Date(0);
+            }
+          } catch (e) {
+            end = new Date(0);
+          }
+
+          if (isNaN(end.getTime())) end = new Date(0);
+
+          // 2. 基于本地时间生成 YYYY-MM-DD
+          const year = start.getFullYear();
+          const month = String(start.getMonth() + 1).padStart(2, '0');
+          const day = String(start.getDate()).padStart(2, '0');
+          const dateOnly = `${year}-${month}-${day}`;
+
+          return {
+            id: String(b.id),
+            tutorName: b.tutorName,
+            tutorImage: b.tutorImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${b.tutorName}`,
+            subject: b.subject,
+            status: b.status === 'pending' || b.status === 'approved' ? 'upcoming' : b.status,
+            startTime: start.getFullYear() === 1970 ? '--:--' : start.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            endTime: end.getFullYear() === 1970 ? '--:--' : end.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            date: dateOnly,
+            type: b.type
+          };
+        });
+        console.log('[DEBUG] Formatted schedule for view:', formattedSchedule);
+        return (
+          <ScheduleView
+            scheduleItems={formattedSchedule as any}
+            onJoinClass={() => setCurrentView('CLASSROOM')}
+            onContactTutor={() => setCurrentView('MESSAGES')}
+            onRefresh={fetchMyBookings}
+          />
+        );
       case 'CLASSROOM':
         return <ClassroomView onLeave={() => setCurrentView('SCHEDULE')} />;
       case 'MESSAGES':
@@ -162,7 +247,8 @@ const App: React.FC = () => {
         return <ChatDetailView conversation={selectedConversation} onBack={() => setCurrentView('MESSAGES')} />;
       case 'PROFILE':
         return <ProfileView
-          onNavigate={setCurrentView}
+          user={currentUser}
+          onNavigate={handleNavigate}
           favoritesCount={favoriteTutorIds.length}
           onLogout={handleLogout}
         />;
@@ -175,18 +261,26 @@ const App: React.FC = () => {
           onTutorClick={handleTutorClick}
           onRemove={toggleFavorite}
         />;
+      case 'MY_BOOKINGS':
+        return <MyBookingsView onBack={() => setCurrentView('PROFILE')} />;
+      case 'ACCOUNT_LOGS':
+        return <AccountLogsView onBack={() => setCurrentView('PROFILE')} />;
+      case 'COMPLETED_CLASSES':
+        return <CompletedClassesView onBack={() => setCurrentView('PROFILE')} />;
       default:
-        return <HomeView tutors={tutors} onTutorClick={handleTutorClick} onSearchClick={() => handleSearchClick()} />;
+        return <HomeView user={currentUser} tutors={tutors} onTutorClick={handleTutorClick} onSearchClick={handleSearchClick} />;
     }
   };
 
-  const shouldShowBottomNav = ['HOME', 'SCHEDULE', 'MESSAGES', 'PROFILE'].includes(currentView);
+  const shouldShowBottomNav = !['LOGIN', 'REGISTER', 'CLASSROOM', 'CHAT_DETAIL', 'BOOKING', 'TUTOR_DETAIL'].includes(currentView);
 
   return (
     <div className="mx-auto max-w-md bg-background-light dark:bg-background-dark min-h-screen relative shadow-2xl overflow-hidden">
-      {renderView()}
+      <div className="pb-20">
+        {renderView()}
+      </div>
       {shouldShowBottomNav && (
-        <BottomNav currentView={currentView} onNavigate={setCurrentView} />
+        <BottomNav currentView={currentView} onNavigate={handleNavigate} />
       )}
     </div>
   );

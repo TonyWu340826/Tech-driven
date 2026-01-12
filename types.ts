@@ -66,4 +66,4 @@ export interface Conversation {
   messages: Message[];
 }
 
-export type ViewState = 'LOGIN' | 'REGISTER' | 'HOME' | 'DISCOVERY' | 'SCHEDULE' | 'PROFILE' | 'TUTOR_DETAIL' | 'BOOKING' | 'MESSAGES' | 'CHAT_DETAIL' | 'CLASSROOM' | 'PERSONAL_INFO' | 'FAVORITES';
+export type ViewState = 'LOGIN' | 'REGISTER' | 'HOME' | 'DISCOVERY' | 'SCHEDULE' | 'PROFILE' | 'TUTOR_DETAIL' | 'BOOKING' | 'MESSAGES' | 'CHAT_DETAIL' | 'CLASSROOM' | 'PERSONAL_INFO' | 'FAVORITES' | 'MY_BOOKINGS' | 'ACCOUNT_LOGS' | 'COMPLETED_CLASSES';

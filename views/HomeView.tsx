@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Tutor } from '../types';
 
 interface HomeViewProps {
+  user: any;
   tutors: Tutor[];
   onTutorClick: (tutor: Tutor) => void;
   onSearchClick: (category?: string) => void;
 }
 
-export const HomeView: React.FC<HomeViewProps> = ({ tutors, onTutorClick, onSearchClick }) => {
+export const HomeView: React.FC<HomeViewProps> = ({ user, tutors, onTutorClick, onSearchClick }) => {
   const [hasUnread, setHasUnread] = useState(true);
 
   return (
@@ -16,7 +17,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ tutors, onTutorClick, onSear
       <header className="sticky top-0 z-10 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm px-4 pt-6 pb-2">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold leading-tight tracking-tight">你好，Alex 👋</h2>
+            <h2 className="text-2xl font-bold leading-tight tracking-tight">你好，{user?.name || '用户'} 👋</h2>
           </div>
           <button
             onClick={() => setHasUnread(false)}
@@ -114,7 +115,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ tutors, onTutorClick, onSear
             <div key={tutor.id} onClick={() => onTutorClick(tutor)} className="p-4 rounded-2xl bg-surface-light dark:bg-surface-dark shadow-sm border border-slate-100 dark:border-slate-800/50 cursor-pointer active:scale-[0.98] transition-transform">
               <div className="flex items-start gap-4">
                 <div className="relative">
-                  <img alt={tutor.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-slate-100 dark:border-slate-700" src={tutor.image} />
+                  <img alt={tutor.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-slate-100 dark:border-slate-700 bg-slate-200"
+                    src={tutor.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${tutor.name}&backgroundColor=${tutor.gender === 'female' ? 'ffdfbf' : 'c0aede'}`} />
                   <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-surface-dark"></div>
                 </div>
                 <div className="flex-1 min-w-0">

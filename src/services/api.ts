@@ -79,6 +79,25 @@ export const bookingService = {
     getMyBookings: async () => {
         const response = await api.get('/bookings');
         return response.data;
+    },
+    cancel: async (id: number) => {
+        const response = await api.put(`/bookings/${id}/cancel`);
+        return response.data;
+    },
+    pay: async (id: number) => {
+        const response = await api.post(`/bookings/${id}/pay`);
+        return response.data;
+    }
+};
+
+export const userService = {
+    getBalance: async () => {
+        const response = await api.get('/bookings/user/balance');
+        return response.data;
+    },
+    getAccountLogs: async () => {
+        const response = await api.get('/bookings/user/account-logs');
+        return response.data;
     }
 };
 
