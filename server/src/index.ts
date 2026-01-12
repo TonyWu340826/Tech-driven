@@ -3,8 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables as early as possible
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// 强制使用基于当前文件位置的绝对路径加载 .env
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 import authRoutes from './routes/authRoutes';
 import tutorRoutes from './routes/tutorRoutes';

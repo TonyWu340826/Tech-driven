@@ -12,7 +12,7 @@ export const generateToken = (user: User): string => {
             email: user.email,
             role: user.role
         },
-        process.env.JWT_SECRET as string,
+        process.env.JWT_SECRET || 'your-super-secret-jwt-key-for-dev-only',
         options
     );
 };
